@@ -1,0 +1,73 @@
+version: "3.7"
+
+services:
+    # image project
+    desafio:
+        container_name: desafioB7web-laravel-9
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: especializati/laravel9-app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        depends_on: 
+            - redis
+        networks: 
+            - desafioInsert
+    
+    # nginx
+    nginx:
+        container_name: desafioB7web-nginx
+        image: nginx:alpine
+        restart: unless-stopped
+        ports: 
+            - "8011:80"
+        volumes: 
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
+        networks: 
+            - desafioInsert
+
+    # db mysql
+    mysql:
+        container_name: desafioB7web-mysql
+        image: mysql:5.7.22
+        restart: unless-stopped
+        environment: 
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+        volumes: 
+            - ./.docker/mysql/dbdata:/var/lib/mysql
+        ports: 
+            - "3327:3306"
+        networks: 
+            - desafioInsert
+
+    # queue
+    queue:
+        container_name: desafioB7web-queue
+        image: especializati/laravel9-app
+        restart: unless-stopped
+        command: "php artisan queue:work"
+        volumes: 
+            - ./:/var/www
+        depends_on: 
+            - redis
+            - desafio
+        networks: 
+            - desafioInsert
+
+    # redis
+    redis:
+        container_name: desafioB7web-redis
+        image: redis:latest
+        networks: 
+            - desafioInsert
+
+networks: 
+    desafioInsert:
+        driver: bridge
